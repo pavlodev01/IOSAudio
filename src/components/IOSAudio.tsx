@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import './IOSAudioStyles.css'
 
 type AudioState = 'idle' | 'listening' | 'playing'
 
@@ -21,7 +22,6 @@ function resumeContextSafe() {
 }
 
 export default function IOSAudio() {
-    const [showUnlock, setShowUnlock] = useState(false)
     const [audioState, setAudioState] = useState<AudioState>('idle')
     const [telemetry, setTelemetry] = useState<string[]>([])
     const [contextId, setContextId] = useState<number>(0)
@@ -35,33 +35,16 @@ export default function IOSAudio() {
     const logEvent = (event: string) => {
         const timestamp = new Date().toLocaleTimeString()
         setTelemetry((prev) => [`${timestamp} — ${event}`, ...prev.slice(0, 9)])
-        console.log(`[${timestamp}] ${event}`)
-    }
-
-    const handleUnlock = () => {
-        ensureAudioContext()
-        resumeContextSafe()
-        setShowUnlock(false)
-        setContextId(ctxCounter)
-        logEvent('audio_unlocked')
     }
 
     const startRecording = useCallback(async () => {
-        if (!_hasUnlocked()) {
-            setShowUnlock(true)
-            logEvent('mic_start_blocked')
-            return
-        }
+        ensureAudioContext()
+        resumeContextSafe()
         if (audioState === 'listening') return
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    channelCount: 1,
-                },
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
             })
             micStreamRef.current = stream
             const ctx = sharedAudioCtx!
@@ -81,7 +64,6 @@ export default function IOSAudio() {
                 recordedChunks.current.push(new Float32Array(e.inputBuffer.getChannelData(0)))
             }
         } catch {
-            setShowUnlock(true)
             logEvent('mic_access_failed')
         }
     }, [audioState])
@@ -97,22 +79,13 @@ export default function IOSAudio() {
         processorRef.current = null
 
         const ctx = sharedAudioCtx!
-        const totalLength = recordedChunks.current.reduce((acc, c) => acc + c.length, 0)
-
-        let buffer: AudioBuffer
-        if (totalLength === 0) {
-            // fallback - короткий синтезований звук
-            buffer = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate)
-            const d = buffer.getChannelData(0)
-            for (let i = 0; i < d.length; i++) d[i] = Math.sin((i / 20) * Math.PI)
-        } else {
-            buffer = ctx.createBuffer(1, totalLength, ctx.sampleRate)
-            const data = buffer.getChannelData(0)
-            let offset = 0
-            for (const chunk of recordedChunks.current) {
-                data.set(chunk, offset)
-                offset += chunk.length
-            }
+        const length = recordedChunks.current.reduce((acc, c) => acc + c.length, 0)
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
+        const data = buffer.getChannelData(0)
+        let offset = 0
+        for (const chunk of recordedChunks.current) {
+            data.set(chunk, offset)
+            offset += chunk.length
         }
         bufferRef.current = buffer
         logEvent('buffer_recorded')
@@ -124,13 +97,8 @@ export default function IOSAudio() {
     }
 
     const playResponse = useCallback(() => {
-        if (!_hasUnlocked()) {
-            setShowUnlock(true)
-            logEvent('play_blocked')
-            return
-        }
-
-        if (audioState === 'listening') stopRecording()
+        ensureAudioContext()
+        resumeContextSafe()
 
         const ctx = sharedAudioCtx!
         setAudioState('playing')
@@ -152,7 +120,7 @@ export default function IOSAudio() {
             setAudioState('idle')
             logEvent('play_end')
         }
-    }, [audioState, stopRecording])
+    }, [])
 
     const resetAudioStack = useCallback(() => {
         logEvent('reset_audio_stack')
@@ -174,18 +142,9 @@ export default function IOSAudio() {
     }, [])
 
     useEffect(() => {
-        if (!_hasUnlocked()) setShowUnlock(true)
-
-        const handleVisibility = () => {
-            resumeContextSafe()
-            logEvent('visibility_change')
-        }
-        const handlePageShow = () => {
-            resumeContextSafe()
-            logEvent('pageshow')
-        }
+        const handleVisibility = () => resumeContextSafe()
+        const handlePageShow = () => resumeContextSafe()
         const handleDeviceChange = () => {
-            logEvent('devicechange')
             if (audioState === 'listening') startRecording().catch(() => logEvent('mic_reacquire_failed'))
         }
 
@@ -204,61 +163,39 @@ export default function IOSAudio() {
         }
     }, [audioState, startRecording])
 
-    const _hasUnlocked = () => !!sharedAudioCtx
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#f9fafb' }}>
-            <div style={{ background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 700 }}>🎤 Audio Recorder</h1>
+        <div className="audio-container">
+            <div className="audio-card">
+                <h1 className="audio-title">🎤 Audio Recorder</h1>
 
-                {showUnlock && (
-                    <button onClick={handleUnlock} style={{ width: '100%', padding: '12px', borderRadius: '16px', background: '#2563eb', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
-                        Tap to enable audio
-                    </button>
-                )}
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <div className="btn-row">
                     <button
                         onClick={toggleRecording}
                         disabled={audioState === 'playing'}
-                        style={{
-                            flex: 1,
-                            padding: '12px',
-                            borderRadius: '12px',
-                            fontWeight: 600,
-                            background: audioState === 'listening' ? '#dc2626' : '#16a34a',
-                            color: 'white',
-                            cursor: 'pointer',
-                        }}
+                        className={`btn btn-main ${audioState === 'listening' ? 'btn-stop' : 'btn-record'}`}
                     >
                         {audioState === 'listening' ? '🛑 Stop Recording' : '🎙 Start Recording'}
                     </button>
 
-                    <button
-                        onClick={playResponse}
-                        disabled={audioState === 'listening'}
-                        style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 600, background: '#7c3aed', color: 'white', cursor: 'pointer', opacity: audioState === 'listening' ? 0.5 : 1 }}
-                    >
+                    <button onClick={playResponse} disabled={audioState === 'listening'} className="btn btn-main btn-play">
                         ▶️ Play
                     </button>
                 </div>
 
-                <button
-                    onClick={resetAudioStack}
-                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#d1d5db', color: '#111827', fontWeight: 600, cursor: 'pointer' }}
-                >
+                <button onClick={resetAudioStack} className="btn btn-secondary">
                     🔄 Reset Audio
                 </button>
 
-                <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div className="info-box">
                     <p><strong>State:</strong> {audioState}</p>
                     <p><strong>AudioContext ID:</strong> {contextId}</p>
                     <p><strong>AudioContext State:</strong> {sharedAudioCtx?.state || 'none'}</p>
                 </div>
 
-                <details style={{ background: '#f9fafb', padding: '12px', borderRadius: '12px' }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: 500 }}>Telemetry (last 10 events)</summary>
-                    <ul style={{ marginTop: '8px', fontSize: '14px', maxHeight: '160px', overflowY: 'auto' }}>
+                <details className="telemetry-box">
+                    <summary>Telemetry (last 10 events)</summary>
+                    <ul>
                         {telemetry.map((t, i) => <li key={i}>{t}</li>)}
                     </ul>
                 </details>

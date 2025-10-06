@@ -1,22 +1,22 @@
-.audio-page {
+.audio-container {
     min-height: 100vh;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     padding: 24px;
-    background: #f3f4f6;
+    background-color: #f9fafb;
 }
 
 .audio-card {
-    background: white;
-    border-radius: 24px;
+    background-color: #fff;
     padding: 32px;
-    max-width: 400px;
-    width: 100%;
+    border-radius: 24px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
 }
 
 .audio-title {
@@ -26,72 +26,81 @@
     color: #1f2937;
 }
 
-.audio-btn-group {
+.btn-row {
     display: flex;
-    gap: 12px;
+    gap: 16px;
 }
 
-.audio-btn {
+.btn {
     padding: 12px;
     font-weight: 600;
     border-radius: 12px;
-    transition: all 0.2s;
+    border: none;
     cursor: pointer;
+    transition: background 0.2s;
+    flex: 1;
 }
 
-.primary-btn {
-    background: #10b981;
-    color: white;
-}
-.primary-btn:hover {
-    background: #059669;
+.btn-main {
+    color: #fff;
 }
 
-.recording-btn {
-    background: #ef4444;
-    color: white;
-}
-.recording-btn:hover {
-    background: #dc2626;
+.btn-record {
+    background-color: #10b981;
 }
 
-.secondary-btn {
-    background: #7c3aed;
-    color: white;
-}
-.secondary-btn:hover {
-    background: #6d28d9;
+.btn-record:hover {
+    background-color: #059669;
 }
 
-.tertiary-btn {
-    background: #d1d5db;
+.btn-stop {
+    background-color: #ef4444;
+}
+
+.btn-stop:hover {
+    background-color: #dc2626;
+}
+
+.btn-play {
+    background-color: #7c3aed;
+}
+
+.btn-play:hover {
+    background-color: #6d28d9;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    color: #fff;
+    width: 100%;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: #d1d5db;
     color: #111827;
-}
-.tertiary-btn:hover {
-    background: #9ca3af;
+    width: 100%;
 }
 
-.audio-info {
-    background: #f3f4f6;
-    padding: 16px;
+.btn-secondary:hover {
+    background-color: #9ca3af;
+}
+
+.info-box {
+    background-color: #f3f4f6;
     border-radius: 12px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
-.label {
-    font-weight: 600;
-}
-
-.telemetry-panel {
-    background: #f9fafb;
-    padding: 12px;
+.telemetry-box {
+    background-color: #f9fafb;
     border-radius: 12px;
-    max-height: 160px;
-    overflow-y: auto;
-}
-.telemetry-panel summary {
-    font-weight: 600;
-    cursor: pointer;
+    padding: 12px;
+    font-size: 0.875rem;
 }
