@@ -1,0 +1,97 @@
+.audio-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #f3f4f6;
+}
+
+.audio-card {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 400px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.audio-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    color: #1f2937;
+}
+
+.audio-btn-group {
+    display: flex;
+    gap: 12px;
+}
+
+.audio-btn {
+    padding: 12px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.primary-btn {
+    background: #10b981;
+    color: white;
+}
+.primary-btn:hover {
+    background: #059669;
+}
+
+.recording-btn {
+    background: #ef4444;
+    color: white;
+}
+.recording-btn:hover {
+    background: #dc2626;
+}
+
+.secondary-btn {
+    background: #7c3aed;
+    color: white;
+}
+.secondary-btn:hover {
+    background: #6d28d9;
+}
+
+.tertiary-btn {
+    background: #d1d5db;
+    color: #111827;
+}
+.tertiary-btn:hover {
+    background: #9ca3af;
+}
+
+.audio-info {
+    background: #f3f4f6;
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-weight: 600;
+}
+
+.telemetry-panel {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 12px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.telemetry-panel summary {
+    font-weight: 600;
+    cursor: pointer;
+}
