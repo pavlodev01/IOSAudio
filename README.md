@@ -18,8 +18,6 @@ It implements a **robust WebAudio state machine**, **gesture-based unlock**, and
 
 ---
 
-## ⚙️ Architecture
-
 ### 🔁 State Machine
 
 ## to run

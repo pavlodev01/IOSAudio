@@ -31,6 +31,7 @@ export default function IOSAudio() {
     const recordedChunks = useRef<Float32Array[]>([])
     const bufferRef = useRef<AudioBuffer | null>(null)
     const processorRef = useRef<ScriptProcessorNode | null>(null)
+    const startTimeRef = useRef<number>(0)
 
     const logEvent = (event: string) => {
         const timestamp = new Date().toLocaleTimeString()
@@ -56,6 +57,7 @@ export default function IOSAudio() {
 
             recordedChunks.current = []
             isRecordingRef.current = true
+            startTimeRef.current = Date.now()
             setAudioState('listening')
             logEvent('mic_start')
 
@@ -69,14 +71,24 @@ export default function IOSAudio() {
     }, [audioState])
 
     const stopRecording = useCallback(() => {
+        if (!isRecordingRef.current) return
         isRecordingRef.current = false
-        setAudioState('idle')
-        logEvent('mic_stop')
+
+        const duration = (Date.now() - startTimeRef.current) / 1000
+        logEvent(`mic_stop — duration: ${duration.toFixed(2)}s`)
 
         micStreamRef.current?.getTracks().forEach((t) => t.stop())
         micStreamRef.current = null
         processorRef.current?.disconnect()
         processorRef.current = null
+
+        if (duration <= 1) {
+            recordedChunks.current = []
+            bufferRef.current = null
+            setAudioState('idle')
+            logEvent('record_ignored (too short)')
+            return
+        }
 
         const ctx = sharedAudioCtx!
         const length = recordedChunks.current.reduce((acc, c) => acc + c.length, 0)
@@ -88,13 +100,9 @@ export default function IOSAudio() {
             offset += chunk.length
         }
         bufferRef.current = buffer
+        setAudioState('idle')
         logEvent('buffer_recorded')
     }, [])
-
-    const toggleRecording = async () => {
-        if (audioState !== 'listening') await startRecording()
-        else stopRecording()
-    }
 
     const playResponse = useCallback(() => {
         ensureAudioContext()
@@ -163,19 +171,21 @@ export default function IOSAudio() {
         }
     }, [audioState, startRecording])
 
-
     return (
         <div className="audio-container">
             <div className="audio-card">
-                <h1 className="audio-title">🎤 Audio Recorder</h1>
+                <h1 className="audio-title">🎤 Push-to-Talk Recorder</h1>
 
                 <div className="btn-row">
                     <button
-                        onClick={toggleRecording}
+                        onMouseDown={startRecording}
+                        onMouseUp={stopRecording}
+                        onTouchStart={startRecording}
+                        onTouchEnd={stopRecording}
                         disabled={audioState === 'playing'}
                         className={`btn btn-main ${audioState === 'listening' ? 'btn-stop' : 'btn-record'}`}
                     >
-                        {audioState === 'listening' ? '🛑 Stop Recording' : '🎙 Start Recording'}
+                        {audioState === 'listening' ? '🎙 Recording...' : '🎤 Hold to Record'}
                     </button>
 
                     <button onClick={playResponse} disabled={audioState === 'listening'} className="btn btn-main btn-play">
