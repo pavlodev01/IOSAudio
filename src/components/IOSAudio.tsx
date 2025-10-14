@@ -32,6 +32,7 @@ export default function IOSAudio() {
     const bufferRef = useRef<AudioBuffer | null>(null)
     const processorRef = useRef<ScriptProcessorNode | null>(null)
     const startTimeRef = useRef<number>(0)
+    const holdTimerRef = useRef<number | null>(null)
 
     const logEvent = (event: string) => {
         const timestamp = new Date().toLocaleTimeString()
@@ -130,6 +131,25 @@ export default function IOSAudio() {
         }
     }, [])
 
+    const handlePressStart = useCallback(() => {
+        if (audioState === 'playing') return
+
+        holdTimerRef.current = window.setTimeout(() => {
+            startRecording()
+        }, 200)
+    }, [audioState, startRecording])
+
+    const handlePressEnd = useCallback(() => {
+        if (holdTimerRef.current) {
+            clearTimeout(holdTimerRef.current)
+            holdTimerRef.current = null
+        }
+
+        if (audioState === 'listening') {
+            stopRecording()
+        }
+    }, [audioState, stopRecording])
+
     const resetAudioStack = useCallback(() => {
         logEvent('reset_audio_stack')
         micStreamRef.current?.getTracks().forEach((t) => t.stop())
@@ -171,6 +191,51 @@ export default function IOSAudio() {
         }
     }, [audioState, startRecording])
 
+    useEffect(() => {
+        ensureAudioContext()
+        setContextId(ctxCounter)
+
+        const initMicPermission = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                stream.getTracks().forEach(t => t.stop())
+                logEvent('mic_permission_granted')
+            } catch {
+                logEvent('mic_permission_denied')
+            }
+        }
+        initMicPermission()
+
+        const handleVisibility = () => resumeContextSafe()
+        const handlePageShow = () => resumeContextSafe()
+        const handleDeviceChange = () => {
+            if (audioState === 'listening') startRecording().catch(() => logEvent('mic_reacquire_failed'))
+        }
+
+        document.addEventListener('visibilitychange', handleVisibility)
+        window.addEventListener('pageshow', handlePageShow)
+        try {
+            navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange as EventListener)
+        } catch {}
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility)
+            window.removeEventListener('pageshow', handlePageShow)
+            try {
+                navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange as EventListener)
+            } catch {}
+        }
+    }, [audioState, startRecording])
+
+    if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current)
+        holdTimerRef.current = null
+    }
+    if (navigator.mediaDevices && (navigator as any).mediaSession) {
+        try {
+            (navigator as any).mediaSession.playbackState = 'playing'
+        } catch {}
+    }
     return (
         <div className="audio-container">
             <div className="audio-card">
@@ -178,12 +243,20 @@ export default function IOSAudio() {
 
                 <div className="btn-row">
                     <button
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                        onTouchStart={startRecording}
-                        onTouchEnd={stopRecording}
+                        onMouseDown={handlePressStart}
+                        onMouseUp={handlePressEnd}
+                        onMouseLeave={handlePressEnd}
+                        onTouchStart={(e) => { e.preventDefault(); handlePressStart(); }}
+                        onTouchEnd={(e) => { e.preventDefault(); handlePressEnd(); }}
+                        onTouchCancel={(e) => { e.preventDefault(); handlePressEnd(); }}
                         disabled={audioState === 'playing'}
                         className={`btn btn-main ${audioState === 'listening' ? 'btn-stop' : 'btn-record'}`}
+                        style={{
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            WebkitTouchCallout: 'none',
+                            touchAction: 'none',
+                        }}
                     >
                         {audioState === 'listening' ? '🎙 Recording...' : '🎤 Hold to Record'}
                     </button>
